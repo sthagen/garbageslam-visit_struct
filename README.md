@@ -543,7 +543,53 @@ So, nowadays I prefer and recommend `for_each`.  The original `apply_visitor` sy
 visit_struct::traits::is_visitable<S>::value
 ```
 
-This type trait can be used to check if a structure is visitable. The above expression should resolve to boolean true or false. I consider it part of the forward-facing interface, you can use it in SFINAE to easily select types that `visit_struct` knows how to use.
+This type trait can be used to check if a structure is visitable. The above expression should resolve to boolean true or false. I consider it part of the public API. You can use it in SFINAE to easily select types that `visit_struct` knows how to use.
+
+## Advanced Features
+
+### Visitation contexts
+
+In a larger project, sometimes you want to visit a different set of members in each of your structures for different purposes.
+For example, for serialization you might want to visit everything. For logging you might want to omit some of the elements. For scripting access you might want a different subset still.
+
+It's possible to use inheritance to create proxy objects which can be declared visitable in different ways from the base object. But it has ergonomic problems and may force unnecessary copies, which is particularly harmful when walking large nested structures.
+
+As an alternative, visit struct supports creating custom visitation "contexts". A context can be represented by any type, but usually a tag type in your program. Structs can be registered as visitable against each of these tags.
+
+```
+struct Logging {};
+struct Scripting {};
+
+struct Foo {
+    int i;
+    double d;
+    bool b;
+    string s;
+};
+
+VISITABLE_STRUCT(Foo, i, d, b, s);
+VISITABLE_STRUCT_IN_CONTEXT(Logging, Foo, i, s);
+VISITABLE_STRUCT_IN_CONTEXT(Scripting, Foo, d, b, s);
+```
+
+Then, you can visit it in a special context by using calls such as
+
+```
+visit_struct::context<Logging>::for_each(foo, visitor);
+```
+
+The whole API of free functions is reproduced under `context<T>` to invoke those functions within the given context.
+
+If you need to use the same context repeatedly, you can shorten this like so
+
+```
+using C = visit_struct::Context<Scripting>;
+C::for_each(foo, visitor);
+C::for_each(bar, visitor);
+```
+
+This also allows you to write functions that are generic over the context parameter if you like.
+The "default" context corresponds to the type `void`.
 
 ## Limits
 
