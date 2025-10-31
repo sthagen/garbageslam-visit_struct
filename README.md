@@ -299,7 +299,7 @@ useful in some cases, like if the struct you want to visit belongs to some other
 project and you can't change its definition.
 
 
-## Binary Vistation
+## Binary Visitation
 
 **visit_struct** also supports visiting two instances of the same struct type at once.
 
